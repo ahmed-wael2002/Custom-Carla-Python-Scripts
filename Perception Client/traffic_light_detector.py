@@ -2,13 +2,17 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 from enum import Enum
+import os
 
+# Enumeration to represent the state of a traffic light
+# Should correspond to the colors in the color_ranges dictionary
 class TrafficLightState(Enum):
     RED = "red"
     YELLOW = "yellow"
     GREEN = "green"
     UNKNOWN = "unknown"
 
+# Class to detect traffic light state in an image
 class TrafficLightDetector:
     def __init__(self, model_path='yolov8m.pt'):
         """
@@ -107,30 +111,52 @@ class TrafficLightDetector:
         
         return result_image 
 
+
+'''
+Test function to demonstrate traffic light detection functionality.
+'''
 def test_traffic_light_detection():
     """
     Test function to demonstrate traffic light detection functionality.
+    Processes all images in the test_images directory.
     """
     # Initialize the detector
     detector = TrafficLightDetector()
     
-    # Load a test image (you'll need to provide a test image)
-    test_image = cv2.imread('test2.jpg')
-    if test_image is None:
-        print("Error: Could not load test image")
+    # Get all jpg images from test_images directory
+    test_images_dir = 'test_images'
+    image_files = [f for f in os.listdir(test_images_dir) if f.endswith('.jpg')]
+    
+    if not image_files:
+        print("Error: No jpg images found in test_images directory")
         return
     
-    # Detect traffic light state
-    state, bounding_boxes = detector.detect(test_image)
-    
-    # Display results
-    result_image = detector.display_detection_result(test_image, state, bounding_boxes)
-    
-    # Save the result instead of displaying it
-    output_path = 'detection_result.jpg'
-    cv2.imwrite(output_path, result_image)
-    print(f"Result image saved to: {output_path}")
-    print(f"Detected Traffic Light State: {state.value}")
+    # Process each image
+    for image_file in image_files:
+        # Construct full path
+        image_path = os.path.join(test_images_dir, image_file)
+        
+        # Load the image
+        test_image = cv2.imread(image_path)
+        if test_image is None:
+            print(f"Error: Could not load image {image_path}")
+            continue
+        
+        # Detect traffic light state
+        state, bounding_boxes = detector.detect(test_image)
+        
+        # Display results
+        result_image = detector.display_detection_result(test_image, state, bounding_boxes)
+        
+        # Save the result
+        output_filename = f"result_{image_file}"
+        output_path = os.path.join(test_images_dir, output_filename)
+        cv2.imwrite(output_path, result_image)
+        print(f"Processed {image_file}:")
+        print(f"  - Detected Traffic Light State: {state.value}")
+        print(f"  - Result image saved to: {output_path}")
+        print()
+
 
 if __name__ == "__main__":
     test_traffic_light_detection() 
