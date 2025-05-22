@@ -27,6 +27,8 @@ class TrafficLightDetector:
             'yellow': ([20, 100, 100], [30, 255, 255]),
             'green': ([40, 100, 100], [80, 255, 255])
         }
+        # Traffic light class ID in COCO dataset
+        self.traffic_light_class_id = 9  # COCO dataset class ID for traffic light
 
     def detect(self, image):
         """
@@ -53,6 +55,10 @@ class TrafficLightDetector:
                 return TrafficLightState.UNKNOWN, []
 
             for box in boxes:
+                # Check if the detected object is a traffic light
+                if int(box.cls[0]) != self.traffic_light_class_id:
+                    continue
+                    
                 # Get box coordinates
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 bounding_boxes.append((x1, y1, x2, y2))
