@@ -38,7 +38,7 @@ class TrafficLightDetector:
             image (numpy.ndarray): Input image in BGR format
             
         Returns:
-            tuple: (TrafficLightState, list of bounding boxes)
+            tuple: (list of TrafficLightState, list of bounding boxes)
         """
         if image is None:
             raise ValueError("Invalid image input")
@@ -52,7 +52,7 @@ class TrafficLightDetector:
         for result in results:
             boxes = result.boxes
             if len(boxes) == 0:
-                return TrafficLightState.UNKNOWN, []
+                return [TrafficLightState.UNKNOWN], []
 
             for box in boxes:
                 # Check if the detected object is a traffic light
@@ -88,18 +88,17 @@ class TrafficLightDetector:
                     detected_states.append(TrafficLightState.UNKNOWN)
 
         if not detected_states:
-            return TrafficLightState.UNKNOWN, []
+            return [TrafficLightState.UNKNOWN], []
             
-        # Return the most common state if multiple traffic lights are detected
-        return max(set(detected_states), key=detected_states.count), bounding_boxes
+        return detected_states, bounding_boxes
 
-    def display_detection_result(self, image, state, bounding_boxes):
+    def display_detection_result(self, image, states, bounding_boxes):
         """
         Display detection results on the image.
         
         Args:
             image (numpy.ndarray): Input image
-            state (TrafficLightState): Detected traffic light state
+            states (list): List of TrafficLightState for each detected traffic light
             bounding_boxes (list): List of bounding boxes (x1, y1, x2, y2)
             
         Returns:
@@ -107,15 +106,33 @@ class TrafficLightDetector:
         """
         result_image = image.copy()
         
-        for x1, y1, x2, y2 in bounding_boxes:
+        for i, ((x1, y1, x2, y2), state) in enumerate(zip(bounding_boxes, states)):
             # Draw bounding box
             cv2.rectangle(result_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
             # Add label
-            cv2.putText(result_image, f"Traffic Light: {state.value}", 
+            cv2.putText(result_image, f"Traffic Light {i+1}: {state.value}", 
                        (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, 
                        (0, 255, 0), 2)
         
         return result_image 
+
+    def process_carla_frame(self, frame):
+        """
+        Process a frame from CARLA and return the annotated frame.
+        
+        Args:
+            frame (numpy.ndarray): Input frame from CARLA
+            
+        Returns:
+            numpy.ndarray: Annotated frame with traffic light detection
+        """
+        # Detect traffic light state
+        state, bounding_boxes = self.detect(frame)
+        
+        # Display detection results on the frame
+        result_frame = self.display_detection_result(frame, state, bounding_boxes)
+        
+        return result_frame
 
 
 '''
@@ -149,17 +166,17 @@ def test_traffic_light_detection():
             continue
         
         # Detect traffic light state
-        state, bounding_boxes = detector.detect(test_image)
+        states, bounding_boxes = detector.detect(test_image)
         
         # Display results
-        result_image = detector.display_detection_result(test_image, state, bounding_boxes)
+        result_image = detector.display_detection_result(test_image, states, bounding_boxes)
         
         # Save the result
         output_filename = f"result_{image_file}"
         output_path = os.path.join(test_images_dir, output_filename)
         cv2.imwrite(output_path, result_image)
         print(f"Processed {image_file}:")
-        print(f"  - Detected Traffic Light State: {state.value}")
+        print(f"  - Detected Traffic Light States: {[state.value for state in states]}")
         print(f"  - Result image saved to: {output_path}")
         print()
 
